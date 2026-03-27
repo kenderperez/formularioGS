@@ -451,7 +451,7 @@
                 <label>¿Tiene planeado visitar algún destino en particular?</label>
                 <textarea id="destino_particular" rows="2" placeholder="Describa los destinos"></textarea>
                 <label>Fecha de Entrada</label>
-                <input type="date" id="fecha_entrada" required>
+                <input type="date" id="fecha_entrada" readonly style="background-color: #f0f0f0; cursor: not-allowed;">
                 <label>¿Cuántos días tiene previsto permanecer?</label>
                 <input type="number" id="dias_permanencia" required min="1" placeholder="Ej. 3">
                 <label>Fecha Prevista de Retorno</label>
@@ -518,6 +518,15 @@
                 // Ahora sí funcionará porque restauramos el ID mainContent
                 setTimeout(() => {
                     if(mainContent) mainContent.classList.add('visible');
+                    
+                    // Establecer fecha actual automáticamente
+                    const today = new Date();
+                    const fechaEntrada = document.getElementById('fecha_entrada');
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    fechaEntrada.value = `${year}-${month}-${day}`;
+                    
                 }, 300);
             }, 3000); 
         });
@@ -580,12 +589,19 @@
         
         function toggleVenezuelaSelect() {
             const container = document.getElementById('venezuela_container');
+            const estadoSelect = document.getElementById('estado');
+            const municipioSelect = document.getElementById('municipio');
+            
             if (paisSelect.value === 'Venezuela') {
                 container.style.display = 'block';
+                estadoSelect.required = true;
+                municipioSelect.required = true;
             } else {
                 container.style.display = 'none';
-                document.getElementById('estado').value = '';
-                document.getElementById('municipio').innerHTML = '<option value="">Seleccione Municipio</option>';
+                estadoSelect.value = '';
+                estadoSelect.required = false;
+                municipioSelect.innerHTML = '<option value="">Seleccione Municipio</option>';
+                municipioSelect.required = false;
             }
         }
         
@@ -616,7 +632,210 @@
 
         // --- 2. LÓGICA DE INTERFAZ (UI) ---
 
+        function validarFase1() {
+            const marca = document.getElementById('marca').value.trim();
+            const modelo = document.getElementById('modelo').value.trim();
+            const matricula = document.getElementById('matricula').value.trim();
+            const color = document.getElementById('color').value.trim();
+            const vehiculo_tipo = document.getElementById('vehiculo_tipo').value;
+
+            if (!marca) {
+                alert('Por favor complete la marca del vehículo.');
+                document.getElementById('marca').focus();
+                return false;
+            }
+            if (!modelo) {
+                alert('Por favor complete el modelo del vehículo.');
+                document.getElementById('modelo').focus();
+                return false;
+            }
+            if (!matricula) {
+                alert('Por favor complete la matrícula del vehículo.');
+                document.getElementById('matricula').focus();
+                return false;
+            }
+            if (!color) {
+                alert('Por favor complete el color del vehículo.');
+                document.getElementById('color').focus();
+                return false;
+            }
+            if (!vehiculo_tipo) {
+                alert('Por favor seleccione el tipo de vehículo.');
+                document.getElementById('vehiculo_tipo').focus();
+                return false;
+            }
+            return true;
+        }
+
+        function validarFase2() {
+            const persona_responsable = document.getElementById('persona_responsable').value.trim();
+            const cedula = document.getElementById('cedula').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const genero = document.getElementById('genero').value;
+
+            if (!persona_responsable) {
+                alert('Por favor complete el nombre de la persona responsable.');
+                document.getElementById('persona_responsable').focus();
+                return false;
+            }
+            if (!cedula) {
+                alert('Por favor complete la cédula.');
+                document.getElementById('cedula').focus();
+                return false;
+            }
+            if (!email) {
+                alert('Por favor complete el correo electrónico.');
+                document.getElementById('email').focus();
+                return false;
+            }
+            if (!telefono) {
+                alert('Por favor complete el teléfono.');
+                document.getElementById('telefono').focus();
+                return false;
+            }
+            if (!genero) {
+                alert('Por favor seleccione el género.');
+                document.getElementById('genero').focus();
+                return false;
+            }
+            return true;
+        }
+
+        function validarFase3() {
+            const num_integrantes = document.getElementById('num_integrantes').value;
+            const num_masculino = document.getElementById('num_masculino').value;
+            const num_femenino = document.getElementById('num_femenino').value;
+            const num_menores = document.getElementById('num_menores').value;
+            const edad_promedio = document.getElementById('edad_promedio').value;
+
+            if (!num_integrantes || num_integrantes < 1) {
+                alert('Por favor indique el número de integrantes (mínimo 1).');
+                document.getElementById('num_integrantes').focus();
+                return false;
+            }
+            if (!num_masculino && num_masculino !== '0') {
+                alert('Por favor indique el número de hombres.');
+                document.getElementById('num_masculino').focus();
+                return false;
+            }
+            if (!num_femenino && num_femenino !== '0') {
+                alert('Por favor indique el número de mujeres.');
+                document.getElementById('num_femenino').focus();
+                return false;
+            }
+            if (!num_menores && num_menores !== '0') {
+                alert('Por favor indique el número de menores de edad.');
+                document.getElementById('num_menores').focus();
+                return false;
+            }
+            if (!edad_promedio || edad_promedio < 1) {
+                alert('Por favor indique la edad promedio del grupo.');
+                document.getElementById('edad_promedio').focus();
+                return false;
+            }
+            return true;
+        }
+
+        function validarFase4() {
+            const pais = document.getElementById('pais').value;
+            const fecha_entrada = document.getElementById('fecha_entrada').value;
+            const dias_permanencia = document.getElementById('dias_permanencia').value;
+            const fecha_retorno = document.getElementById('fecha_retorno').value;
+            const tipo_alojamiento = document.getElementById('tipo_alojamiento').value;
+            const visitado_antes_check = document.getElementById('visitado_antes_check').checked;
+            const reserva_hotel_check = document.getElementById('reserva_hotel_check').checked;
+
+            if (!pais) {
+                alert('Por favor seleccione el país de procedencia.');
+                document.getElementById('pais').focus();
+                return false;
+            }
+
+            if (pais === 'Venezuela') {
+                const estado = document.getElementById('estado').value;
+                const municipio = document.getElementById('municipio').value;
+                if (!estado) {
+                    alert('Por favor seleccione el estado.');
+                    document.getElementById('estado').focus();
+                    return false;
+                }
+                if (!municipio) {
+                    alert('Por favor seleccione el municipio.');
+                    document.getElementById('municipio').focus();
+                    return false;
+                }
+            }
+
+            // La fecha de entrada ya se establece automáticamente, no necesita validación
+            if (!dias_permanencia || dias_permanencia < 1) {
+                alert('Por favor indique los días de permanencia.');
+                document.getElementById('dias_permanencia').focus();
+                return false;
+            }
+            if (!fecha_retorno) {
+                alert('Por favor seleccione la fecha de retorno.');
+                document.getElementById('fecha_retorno').focus();
+                return false;
+            }
+            if (!tipo_alojamiento) {
+                alert('Por favor seleccione el tipo de alojamiento.');
+                document.getElementById('tipo_alojamiento').focus();
+                return false;
+            }
+
+            // Validar fechas
+            const entrada = new Date(fecha_entrada);
+            const retorno = new Date(fecha_retorno);
+            if (entrada > retorno) {
+                alert('La fecha de entrada no puede ser posterior a la fecha de retorno.');
+                document.getElementById('fecha_retorno').focus();
+                return false;
+            }
+
+            // Validar campos condicionales
+            if (visitado_antes_check && !document.getElementById('ultima_visita').value) {
+                alert('Por favor indique cuándo visitó la Gran Sabana por última vez.');
+                document.getElementById('ultima_visita').focus();
+                return false;
+            }
+
+            if (reserva_hotel_check && !document.getElementById('hotel_cual').value.trim()) {
+                alert('Por favor indique el nombre del hotel donde tiene reserva.');
+                document.getElementById('hotel_cual').focus();
+                return false;
+            }
+
+            return true;
+        }
+
         function irAFase(n) {
+            // Validar la fase actual antes de pasar a la siguiente
+            const faseActual = Array.from(document.querySelectorAll('.phase')).findIndex(el => el.classList.contains('active')) + 1;
+            
+            if (n > faseActual) {
+                // Validar fase actual antes de avanzar
+                let validacionExitosa = false;
+                switch(faseActual) {
+                    case 1:
+                        validacionExitosa = validarFase1();
+                        break;
+                    case 2:
+                        validacionExitosa = validarFase2();
+                        break;
+                    case 3:
+                        validacionExitosa = validarFase3();
+                        break;
+                    case 4:
+                        validacionExitosa = validarFase4();
+                        break;
+                }
+                
+                if (!validacionExitosa) {
+                    return; // No avanzar si la validación falla
+                }
+            }
+
             document.querySelectorAll('.phase').forEach(el => el.classList.remove('active'));
             document.getElementById('fase' + n).classList.add('active');
             
