@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Detalles Visita</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <h1>Datos de la Visita</h1>
+    <div style="border: 2px solid #ccc; padding: 20px; border-radius: 10px;">
+        <h3>Datos del Vehículo</h3>
+        <p><strong>Marca:</strong> {{ v.marca }}</p>
+        <p><strong>Modelo:</strong> {{ v.modelo }}</p>
+        <p><strong>Placa:</strong> {{ v.placa }}</p>
+        <p><strong>Color:</strong> {{ v.color }}</p>
+        <p><strong>Tipo de Vehículo:</strong> {{ v.vehiculo_tipo }}</p>
+
+        <h3>Datos del Responsable del Grupo</h3>
+        <p><strong>Persona Responsable:</strong> {{ v.persona_responsable }}</p>
+        <p><strong>Cédula:</strong> {{ v.cedula }}</p>
+        <p><strong>Email:</strong> {{ v.email }}</p>
+        <p><strong>Teléfono:</strong> {{ v.telefono }}</p>
+        <p><strong>Género:</strong> {{ v.genero }}</p>
+
+        <h3>Composición del Grupo</h3>
+        <p><strong>Número de Integrantes:</strong> {{ v.num_integrantes }}</p>
+        <p><strong>Número Masculino:</strong> {{ v.num_masculino }}</p>
+        <p><strong>Número Femenino:</strong> {{ v.num_femenino }}</p>
+        <p><strong>Número Menores de Edad:</strong> {{ v.num_menores }}</p>
+        <p><strong>Edad Promedio:</strong> {{ v.edad_promedio }}</p>
+
+        <h3>Detalles de la Visita</h3>
+        <p><strong>Procedencia:</strong> {{ v.procedencia }}</p>
+        <p><strong>¿Ha visitado antes?:</strong> {{ v.visitado_antes }}</p>
+        {% if v.ultima_visita %}
+        <p><strong>Última Visita:</strong> {{ v.ultima_visita }}</p>
+        {% endif %}
+        <p><strong>Destino Particular:</strong> {{ v.destino_particular or 'Ninguno' }}</p>
+        <p><strong>Fecha de Entrada:</strong> {{ v.fecha_entrada }}</p>
+        <p><strong>Días de Permanencia:</strong> {{ v.dias_permanencia }}</p>
+        <p><strong>Fecha de Retorno:</strong> {{ v.fecha_retorno }}</p>
+        <p><strong>¿Reserva de Hotel?:</strong> {{ v.reserva_hotel }}</p>
+        {% if v.hotel_cual %}
+        <p><strong>Hotel:</strong> {{ v.hotel_cual }}</p>
+        {% endif %}
+        <p><strong>Tipo de Alojamiento:</strong> {{ v.tipo_alojamiento }}</p>
+
+        <p><strong>Fecha de Registro:</strong> {{ v.fecha_creacion }}</p>
+    </div><br>
+    <a href="/lector"><button>Escanear Otro</button></a>
+    <a href="/admin"><button>Ir al Panel</button></a>
+</body>
+</html>

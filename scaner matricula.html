@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Escáner de Matrículas Web</title>
+    <!-- Importamos Tesseract.js (Motor OCR) -->
+    <script src='https://unpkg.com/tesseract.js@v2.1.0/dist/tesseract.min.js'></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            font-family: 'Segoe UI', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Contenedor de la cámara */
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            height: 70vh;
+            overflow: hidden;
+            background: #222;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Marco de escaneo */
+        .scan-region {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 150px;
+            border: 2px solid rgba(0, 255, 0, 0.5);
+            border-radius: 10px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); /* Oscurece el resto */
+            z-index: 10;
+        }
+
+        /* Línea de escaneo animada */
+        .scan-line {
+            width: 100%;
+            height: 2px;
+            background: #0f0;
+            position: absolute;
+            top: 0;
+            animation: scan 2s infinite linear;
+            box-shadow: 0 0 4px #0f0;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: 100%; }
+            100% { top: 0; }
+        }
+
+        /* Resultado */
+        .result-container {
+            flex: 1;
+            width: 100%;
+            background: #fff;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+            z-index: 20;
+        }
+
+        .plate-box {
+            background: #feca1d; /* Color amarillo placa (o blanco) */
+            border: 4px solid #000;
+            border-radius: 8px;
+            padding: 10px 30px;
+            font-size: 2rem;
+            font-weight: bold;
+            font-family: monospace;
+            color: #000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            min-width: 200px;
+            text-align: center;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status {
+            margin-top: 10px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        /* Canvas oculto para procesamiento */
+        #canvas { display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="camera-container">
+        <video id="video" autoplay playsinline></video>
+        <div class="scan-region">
+            <div class="scan-line"></div>
+        </div>
+    </div>
+
+    <div class="result-container">
+        <div class="plate-box" id="plateResult">---</div>
+        <div class="status" id="statusText">Iniciando cámara...</div>
+    </div>
+
+    <!-- Canvas para capturar frames -->
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const plateResult = document.getElementById('plateResult');
+        const statusText = document.getElementById('statusText');
+
+        let isScanning = false;
+
+        // 1. INICIAR CÁMARA
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" } // Cámara trasera
+                });
+                video.srcObject = stream;
+                statusText.innerText = "Apunta a la matrícula dentro del recuadro";
+                
+                // Esperar a que el video cargue para empezar a escanear
+                video.addEventListener('loadeddata', () => {
+                    if (!isScanning) {
+                        isScanning = true;
+                        scanLoop();
+                    }
+                });
+            } catch (err) {
+                console.error(err);
+                statusText.innerText = "Error: No se pudo acceder a la cámara. (Usa HTTPS)";
+            }
+        }
+
+        // 2. BUCLE DE ESCANEO
+        async function scanLoop() {
+            if (!isScanning) return;
+
+            // Capturar frame en el canvas
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Dibujar video en canvas
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // RECORTAR solo la zona central (donde está el recuadro verde)
+            // Esto mejora MUCHÍSIMO la velocidad y precisión
+            const cropWidth = canvas.width * 0.8;
+            const cropHeight = canvas.height * 0.3; // Aproximado al recuadro visual
+            const cropX = (canvas.width - cropWidth) / 2;
+            const cropY = (canvas.height - cropHeight) / 2;
+
+            // Obtener los datos de imagen de esa zona
+            const imageData = ctx.getImageData(cropX, cropY, cropWidth, cropHeight);
+            
+            // PRE-PROCESAMIENTO (Binarización para mejor contraste)
+            const binarizedImage = preprocessImage(imageData);
+
+            // Poner la imagen procesada en un canvas temporal para que Tesseract la lea
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = cropWidth;
+            tempCanvas.height = cropHeight;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.putImageData(binarizedImage, 0, 0);
+
+            statusText.innerText = "Procesando...";
+
+            // 3. RECONOCER TEXTO CON TESSERACT
+            try {
+                const { data: { text } } = await Tesseract.recognize(
+                    tempCanvas, 
+                    'eng', // Usamos inglés porque reconoce bien letras y números
+                    { logger: m => console.log(m.status) } // Opcional: ver progreso en consola
+                );
+
+                // 4. FILTRAR RESULTADO (Limpiar basura)
+                const cleanText = filtrarMatricula(text);
+
+                if (cleanText.length >= 5) { // Si detectamos algo que parece una matrícula
+                    plateResult.innerText = cleanText;
+                    statusText.innerText = "¡Matrícula detectada!";
+                    // Opcional: Pausar escaneo brevemente
+                } else {
+                    statusText.innerText = "Escaneando...";
+                }
+
+            } catch (error) {
+                console.error(error);
+            }
+
+            // Repetir el bucle (ajustar tiempo para no saturar el móvil)
+            setTimeout(scanLoop, 500); 
+        }
+
+        // Función para limpiar el texto (Regex para matrículas)
+        function filtrarMatricula(text) {
+            // Eliminar todo lo que NO sea letra mayúscula o número
+            let cleaned = text.replace(/[^A-Z0-9]/g, '');
+            return cleaned;
+        }
+
+        // Función de Pre-procesamiento (Convertir a Blanco y Negro)
+        function preprocessImage(imageData) {
+            const d = imageData.data;
+            // Algoritmo simple de umbralización (Threshold)
+            for (let i = 0; i < d.length; i += 4) {
+                const r = d[i];
+                const g = d[i + 1];
+                const b = d[i + 2];
+                // Escala de grises
+                const v = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+                // Binarizar (Blanco o Negro puro) basado en un umbral
+                const threshold = 100; // Ajustable según iluminación
+                const final = v >= threshold ? 255 : 0;
+                d[i] = d[i+1] = d[i+2] = final;
+            }
+            return imageData;
+        }
+
+        // Iniciar
+        window.addEventListener('load', startCamera);
+
+    </script>
+</body>
+</html>

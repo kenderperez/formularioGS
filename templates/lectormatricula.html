@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comunidad Akurima - Cancha Múltiple</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="header-branding">
+                <span class="header-subtitle">SECRETARÍA DE BIENESTAR SOCIAL</span>
+                <span class="header-title">DIRECCIÓN DE DEPORTES</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-content container">
+        <section class="project-hero">
+            <div class="project-info">
+                <h1 class="project-community">Comunidad Akurima</h1>
+                <p class="project-location">Cancha Múltiple Club Akurima</p>
+            </div>
+            <div class="project-image-gallery">
+                <div class="gallery-main-image">
+                    <img src="cancha_before.jpg" alt="Cancha antes de la intervención" class="lazy-load" data-src="cancha_before.jpg">
+                </div>
+                <div class="gallery-thumbnails">
+                    <img src="cancha_painting.jpg" alt="Pintura de la cancha" class="lazy-load" data-src="cancha_painting.jpg">
+                    <img src="cancha_players.jpg" alt="Jugadores en la cancha" class="lazy-load" data-src="cancha_players.jpg">
+                    <!-- Si tienes más imágenes, añádelas aquí -->
+                </div>
+            </div>
+        </section>
+
+        <section class="project-details grid-layout">
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-tasks icon-left"></i> Trabajos Realizados</h2>
+                <ul class="list">
+                    <li><span class="list-item-text">Pintura General</span></li>
+                    <li><span class="list-item-text">Trabajo en Conjunto con la GNB</span></li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-users icon-left"></i> Sectores Beneficiados</h2>
+                <ul class="list">
+                    <li><span class="list-item-text">Akurima</span></li>
+                    <li><span class="list-item-text">Centro Santa Elena</span></li>
+                    <li><span class="list-item-text">Terrazas de Akurima</span></li>
+                    <li><span class="list-item-text">Lomas de Akurima</span></li>
+                </ul>
+            </div>
+
+            <div class="card card-highlight">
+                <h2 class="card-title"><i class="fas fa-chart-line icon-left"></i> Población Beneficiada</h2>
+                <p class="benefited-population"><span>400</span></p>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 Secretaría de Bienestar Social. Todos los derechos reservados.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const lazyLoadImages = document.querySelectorAll(".lazy-load");
+
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.classList.remove("lazy-load");
+                        observer.unobserve(img);
+                    }
+                });
+            });
+
+            lazyLoadImages.forEach(img => {
+                observer.observe(img);
+            });
+        });
+    </script>
+</body>
+</html>

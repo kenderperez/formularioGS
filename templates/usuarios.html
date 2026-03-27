@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gestión de Usuarios</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <nav><a href="/admin">Volver al Panel</a></nav>
+    <h1>Crear Usuario</h1>
+    <form method="POST">
+        <input type="text" name="username" placeholder="Usuario" required>
+        <input type="password" name="password" placeholder="Contraseña" required>
+        <select name="rango">
+            <option value="usuario">Usuario Normal</option>
+            <option value="admin">Administrador</option>
+        </select>
+        <button type="submit">Registrar</button>
+    </form>
+    <h2>Usuarios Activos</h2>
+    <ul>
+        {% for u in usuarios %}
+        <li>{{ u.username }} - <strong>{{ u.rango }}</strong></li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animación Gran Sabana</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f3f4f6; /* Fondo gris claro suave */
+            font-family: sans-serif;
+            overflow: hidden;
+        }
+
+        /* Contenedor principal que da la perspectiva 3D */
+        .logo-scene {
+            perspective: 1000px;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* El envoltorio que se moverá en 3D */
+        .logo-wrapper {
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out; /* Suavizado para el movimiento del mouse */
+            animation: entrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; /* Animación de entrada */
+            opacity: 0;
+        }
+
+        /* La Imagen del Logo */
+        .logo-img {
+            width: 100%;
+            height: auto;
+            display: block;
+            /* Sombra suave para despegarlo del fondo */
+            filter: drop-shadow(0 15px 15px rgba(0,0,0,0.15));
+            transform: translateZ(20px); /* Empujamos la imagen hacia el frente en 3D */
+        }
+
+        /* Efecto de "Sol/Aura" detrás del logo */
+        .sun-glow {
+            position: absolute;
+            top: 10%; /* Ajustado cerca de donde está el sol en tu logo */
+            left: 50%;
+            transform: translateX(-50%) translateZ(-10px); /* Detrás del logo */
+            width: 150px;
+            height: 150px;
+            background: radial-gradient(circle, rgba(255, 165, 0, 0.6) 0%, rgba(255, 215, 0, 0.2) 40%, transparent 70%);
+            border-radius: 50%;
+            filter: blur(20px);
+            animation: pulse-sun 4s infinite ease-in-out;
+            pointer-events: none;
+        }
+
+        /* Efecto de brillo que pasa por encima (Shimmer) */
+        .shimmer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.4) 50%, transparent 70%);
+            transform: skewX(-20deg) translateX(-150%);
+            pointer-events: none;
+            /* Solo se anima una vez al inicio */
+            animation: shimmer-pass 2s 1.5s forwards; 
+            mix-blend-mode: overlay;
+        }
+
+        /* --- KEYFRAMES (Animaciones CSS) --- */
+
+        /* 1. Entrada tipo amanecer (Sube y enfoca) */
+        @keyframes entrance {
+            0% {
+                opacity: 0;
+                transform: translateY(40px) scale(0.9) rotateX(10deg);
+                filter: blur(10px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0) scale(1) rotateX(0);
+                filter: blur(0);
+            }
+        }
+
+        /* 2. El sol pulsando detrás */
+        @keyframes pulse-sun {
+            0%, 100% { transform: translateX(-50%) translateZ(-10px) scale(1); opacity: 0.6; }
+            50% { transform: translateX(-50%) translateZ(-10px) scale(1.3); opacity: 0.9; }
+        }
+
+        /* 3. Brillo pasando */
+        @keyframes shimmer-pass {
+            0% { transform: skewX(-20deg) translateX(-150%); }
+            100% { transform: skewX(-20deg) translateX(150%); }
+        }
+
+        /* Estilo para las aves (Opcional: Si quisieras añadir aves flotantes con CSS) */
+        .bird-decoration {
+            position: absolute;
+            top: -20px;
+            right: 10%;
+            font-size: 20px;
+            color: #ef4444;
+            opacity: 0;
+            animation: birds-fly 3s 1s forwards;
+        }
+        @keyframes birds-fly {
+            from { opacity:0; transform: translateY(20px) translateX(-20px); }
+            to { opacity:1; transform: translateY(0) translateX(0); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="logo-scene" id="scene">
+        <div class="logo-wrapper" id="logo">
+            <!-- El resplandor solar detrás -->
+            <div class="sun-glow"></div>
+            
+            <!-- Tu imagen -->
+            <img src="gransabana.png" alt="Gran Sabana Esequiba" class="logo-img">
+            
+            <!-- Brillo superior -->
+            <div class="shimmer"></div>
+        </div>
+    </div>
+
+    <script>
+        /* --- LÓGICA JAVASCRIPT PARA EFECTO 3D (TILT) --- */
+        const scene = document.getElementById('scene');
+        const logo = document.getElementById('logo');
+
+        // Configuración de intensidad del efecto
+        const movementStrength = 20; // Cuánto se mueve en píxeles
+        const rotationStrength = 10; // Cuánto rota en grados
+
+        scene.addEventListener('mousemove', (e) => {
+            // Obtener dimensiones
+            const { width, height, left, top } = scene.getBoundingClientRect();
+            
+            // Calcular la posición del mouse relativa al centro del contenedor
+            const mouseX = e.clientX - (left + width / 2);
+            const mouseY = e.clientY - (top + height / 2);
+
+            // Calcular porcentajes (-1 a 1)
+            const xPct = mouseX / (width / 2);
+            const yPct = mouseY / (height / 2);
+
+            // Calcular rotación (Invertimos eje Y para que se sienta natural)
+            const rotateX = yPct * -rotationStrength;
+            const rotateY = xPct * rotationStrength;
+
+            // Aplicar transformación
+            // rotateX: inclina arriba/abajo
+            // rotateY: inclina izquierda/derecha
+            logo.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
+        });
+
+        // Resetear posición cuando el mouse sale
+        scene.addEventListener('mouseleave', () => {
+            logo.style.transform = `rotateX(0deg) rotateY(0deg)`;
+            // Transición suave al volver al centro
+            logo.style.transition = 'transform 0.5s ease-out';
+        });
+
+        // Quitar la transición lenta cuando entra el mouse para que responda rápido
+        scene.addEventListener('mouseenter', () => {
+            logo.style.transition = 'transform 0.1s ease-out';
+        });
+
+        /* --- SOPORTE PARA MÓVIL (GIROSCOPIO) - Opcional --- */
+        if (window.DeviceOrientationEvent) {
+            window.addEventListener("deviceorientation", (event) => {
+                const rotateY = event.gamma / 3; // Izquierda/Derecha
+                const rotateX = event.beta / 3 - 15; // Arriba/Abajo (ajuste por inclinación natural de mano)
+                
+                // Limitadores para que no gire loco
+                if (Math.abs(rotateY) < 20 && Math.abs(rotateX) < 20) {
+                     logo.style.transform = `rotateX(${-rotateX}deg) rotateY(${rotateY}deg)`;
+                }
+            }, true);
+        }
+    </script>
+</body>
+</html>

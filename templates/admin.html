@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Panel Administrador</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <nav>
+        Hola, {{ username }} ({{ rango }}) | 
+        <a href="/lector">📷 Lector QR</a> | 
+        {% if rango == 'admin' %}<a href="/admin/usuarios">👥 Usuarios</a> | {% endif %}
+        <a href="/logout">Salir</a>
+    </nav>
+    <hr>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h1>Registros de Ingreso</h1>
+        {% if rango == 'admin' %}
+        <a href="{{ url_for('exportar_excel', placa=request.args.get('placa', '')) }}">
+            <button style="background-color: #2e7d32; color: white;">📥 Descargar Excel</button>
+        </a>
+        {% endif %}
+    </div>
+
+    <form method="GET" action="/admin" style="display: flex; gap: 10px; align-items: center; margin-bottom: 20px;">
+        <div>
+            <label for="placa" style="display: block; margin-bottom: 5px;">Filtrar por Placa:</label>
+            <input type="text" name="placa" id="placa" placeholder="Ej. ABC-123" value="{{ request.args.get('placa', '') }}">
+        </div>
+        <div>
+            <label for="fecha" style="display: block; margin-bottom: 5px;">Filtrar desde Fecha:</label>
+            <input type="date" name="fecha" id="fecha" value="{{ request.args.get('fecha', '') }}">
+        </div>
+        <div style="align-self: flex-end;">
+            <button type="submit">Buscar</button>
+        </div>
+    </form>
+
+    <table>
+        <tr><th>Fecha</th><th>Persona Responsable</th><th>Placa</th><th>Integrantes</th><th>Procedencia</th><th>Detalles</th><th>QR</th></tr>
+        {% for v in visitas %}
+        <tr>
+            <td>{{ v.fecha_creacion }}</td>
+            <td>{{ v.persona_responsable }}</td>
+            <td>{{ v.placa }}</td>
+            <td>{{ v.num_integrantes }}</td>
+            <td>{{ v.procedencia }}</td>
+            <td><a href="/detalles_visita/{{ v.id }}">Ver</a></td>
+            <td><a href="/qr/{{ v.id }}" target="_blank">Ver</a></td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

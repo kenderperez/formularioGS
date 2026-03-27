@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Registro Gran Sabana</title>
+    
+    <!-- Librerías Externas -->
+    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+    <!-- Fuente Moderna -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- ESTILOS MODERNOS --- */
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-light: #6b7280;
+            --border: #e5e7eb;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+
+              /* --- PANTALLA DE CARGA (SPLASH SCREEN) --- */
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #ffffff;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.8s ease-out, visibility 0.8s;
+        }
+        #splash-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Animación Logo */
+        .logo-scene { perspective: 1000px; width: 280px; height: 280px; display: flex; justify-content: center; align-items: center; position: relative; }
+        .logo-wrapper { position: relative; transform-style: preserve-3d; animation: entrance 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards, float 6s ease-in-out infinite; }
+        
+        .logo-img {
+            width: 100%; display: block;
+            filter: drop-shadow(0 15px 15px rgba(255, 255, 255, 0.2));
+            transform: translateZ(20px);
+        }
+
+        .sun-glow {
+            position: absolute; top: 10%; left: 50%;
+            transform: translateX(-50%) translateZ(-10px);
+            width: 120px; height: 120px;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, rgba(255, 215, 0, 0.2) 50%, transparent 70%);
+            border-radius: 50%; filter: blur(20px);
+            animation: pulse-sun 3s infinite ease-in-out;
+        }
+
+        .shimmer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.6) 50%, transparent 70%);
+            transform: skewX(-20deg) translateX(-150%);
+            animation: shimmer-pass 2s 1s forwards; pointer-events: none;
+        }
+
+        @keyframes entrance { 0% { opacity: 0; transform: translateY(40px) scale(0.8) rotateX(10deg); filter: blur(10px); } 100% { opacity: 1; transform: translateY(0) scale(1) rotateX(0); filter: blur(0); } }
+        @keyframes pulse-sun { 0%, 100% { transform: translateX(-50%) translateZ(-10px) scale(1); opacity: 0.6; } 50% { transform: translateX(-50%) translateZ(-10px) scale(1.4); opacity: 0.9; } }
+        @keyframes shimmer-pass { 0% { transform: skewX(-20deg) translateX(-150%); } 100% { transform: skewX(-20deg) translateX(150%); } }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+
+        /* --- CONTENIDO PRINCIPAL (Oculto al inicio) --- */
+        #mainContent {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        #mainContent.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Tarjeta */
+        .card {
+            background: var(--card-bg); width: 100%; max-width: 420px; padding: 2.5rem;
+            border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+
+        /* Indicador de Estado de Red (Flotante) */
+        .network-status {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: var(--text-main);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.3s ease;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .network-status.offline {
+            background-color: var(--text-main);
+            transform: translateX(-50%) translateY(0);
+        }
+        
+        .dot { width: 8px; height: 8px; border-radius: 50%; background-color: var(--danger); }
+
+        /* Tarjeta Principal */
+        .card {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 420px;
+            padding: 2.5rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            overflow: hidden;
+            position: relative;
+        }
+
+        h1 { font-size: 1.5rem; text-align: center; margin-bottom: 2rem; color: var(--text-main); }
+        h3 { font-size: 1.1rem; color: var(--primary-dark); margin-bottom: 1.5rem; border-bottom: 2px solid var(--bg); padding-bottom: 0.5rem; }
+
+        /* Inputs */
+        label { display: block; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-main); font-weight: 500; }
+        input, textarea, select {
+            width: 100%; padding: 12px; margin-bottom: 1.25rem; border: 2px solid var(--border);
+            border-radius: 10px; font-size: 1rem; font-family: inherit; transition: all 0.2s; box-sizing: border-box; background: #f9fafb;
+        }
+        input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); background: #fff; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+
+        /* Estilos Modernos para Select */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+
+        /* Estilos para Checkboxes (si se agregan) */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1.25rem;
+        }
+        .checkbox-container input[type="checkbox"] {
+            width: auto;
+            margin-right: 10px;
+            accent-color: var(--primary);
+        }
+        .checkbox-container label {
+            margin-bottom: 0;
+            cursor: pointer;
+        }
+
+        /* Botones */
+        .btn-group { display: flex; gap: 10px; margin-top: 1rem; }
+        button {
+            width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+            cursor: pointer; transition: transform 0.1s, opacity 0.2s;
+        }
+        button:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-dark); }
+        .btn-secondary { background-color: transparent; border: 2px solid var(--border); color: var(--text-light); }
+        .btn-secondary:hover { border-color: var(--text-light); color: var(--text-main); }
+
+        /* Animaciones */
+        .phase { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .phase.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .spinner {
+            display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%; border-top-color: #fff; animation: spin 1s ease-in-out infinite;
+            margin-left: 10px; vertical-align: middle; display: none;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .qr-container { text-align: center; display: none; animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes scaleUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        canvas { border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: 20px auto; }
+
+        .status-msg { font-size: 0.9rem; margin: 15px 0; padding: 10px; border-radius: 8px; text-align: center; }
+        .status-msg.sync { background: #d1fae5; color: #065f46; }
+        .status-msg.local { background: #fef3c7; color: #92400e; }
+        .status-msg.error { background: #fee2e2; color: #991b1b; }
+
+        /* Timeline Styles */
+        .timeline {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border);
+            z-index: 1;
+        }
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+        }
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-light);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .step.completed .step-circle {
+            background: var(--primary);
+            color: white;
+        }
+        .step.active .step-circle {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
+        }
+        .step-text {
+            margin-top: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text-light);
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+        .step.completed .step-text {
+            color: var(--primary);
+        }
+        .step.active .step-text {
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        /* Navbar Styles */
+        .navbar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border);
+            width: 100%;
+            max-width: 420px;
+        }
+        .navbar-logo {
+            height: 250px;
+            width: auto;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+        }
+    </style>
+</head>
+<body>
+
+        <!-- 1. PANTALLA DE CARGA -->
+    <div id="splash-screen">
+        <div class="logo-scene">
+            <div class="logo-wrapper">
+                <div class="sun-glow"></div>
+                
+                <!-- CORRECCIÓN DE LA RUTA DE LA IMAGEN PARA FLASK -->
+                <!-- La imagen debe estar en la carpeta 'static' -->
+                <img src="/static/gransabana.png" alt="Gran Sabana" class="logo-img">
+                
+                <div class="shimmer"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Indicador Offline Flotante -->
+    <div id="networkStatus" class="network-status">
+        <span class="dot"></span> Sin conexión (Modo Offline)
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <img src="/static/gransabana.png" alt="Gran Sabana" class="navbar-logo">
+    </nav>
+
+    <!-- Contenedor Principal -->
+    <div class="card">
+        <h1>Ingreso Gran Sabana</h1>
+        
+        <!-- Timeline -->
+        <div class="timeline">
+            <div class="step active" data-step="1">
+                <div class="step-circle">1</div>
+                <div class="step-text">Datos del Vehículo</div>
+            </div>
+            <div class="step" data-step="2">
+                <div class="step-circle">2</div>
+                <div class="step-text">Datos del Responsable</div>
+            </div>
+            <div class="step" data-step="3">
+                <div class="step-circle">3</div>
+                <div class="step-text">Composición del Grupo</div>
+            </div>
+            <div class="step" data-step="4">
+                <div class="step-circle">4</div>
+                <div class="step-text">Detalles de la Visita</div>
+            </div>
+        </div>
+        
+        <form id="multiPhaseForm">
+            <!-- FASE 1: Datos del Vehículo -->
+            <div id="fase1" class="phase active">
+                <h3>Datos del Vehículo</h3>
+                <label>Marca</label>
+                <input type="text" id="marca" required placeholder="Ej. Toyota">
+                <label>Modelo</label>
+                <input type="text" id="modelo" required placeholder="Ej. Corolla">
+                <label>Matrícula</label>
+                <input type="text" id="matricula" required placeholder="Ej. ABC-123">
+                <label>Color</label>
+                <input type="text" id="color" required placeholder="Ej. Blanco">
+                <label>Tipo de Vehículo</label>
+                <select id="vehiculo_tipo" required>
+                    <option value="">Seleccionar</option>
+                    <option value="particular">Particular</option>
+                    <option value="privado">Privado</option>
+                </select>
+                
+                <button type="button" class="btn-primary" onclick="irAFase(2)">
+                    Siguiente &rarr;
+                </button>
+            </div>
+            
+            <!-- FASE 2: Datos del Responsable del Grupo -->
+            <div id="fase2" class="phase">
+                <h3>Datos del Responsable del Grupo</h3>
+                <label>Persona Responsable</label>
+                <input type="text" id="persona_responsable" required placeholder="Nombre completo">
+                <label>Cédula</label>
+                <input type="text" id="cedula" required placeholder="Ej. V-12345678">
+                <label>Email</label>
+                <input type="email" id="email" required placeholder="correo@ejemplo.com">
+                <label>Teléfono</label>
+                <input type="tel" id="telefono" required placeholder="Ej. 0412-1234567">
+                <label>Género</label>
+                <select id="genero" required>
+                    <option value="">Seleccionar</option>
+                    <option value="masculino">Masculino</option>
+                    <option value="femenino">Femenino</option>
+                </select>
+                
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="irAFase(1)">Atrás</button>
+                    <button type="button" class="btn-primary" onclick="irAFase(3)">
+                        Siguiente &rarr;
+                    </button>
+                </div>
+            </div>
+            
+            <!-- FASE 3: Composición del Grupo -->
+            <div id="fase3" class="phase">
+                <h3>Composición del Grupo</h3>
+                <label>Número de Integrantes (incluyendo responsable)</label>
+                <input type="number" id="num_integrantes" required min="1" placeholder="Ej. 5">
+                <label>Número Masculino</label>
+                <input type="number" id="num_masculino" required min="0" placeholder="Ej. 3">
+                <label>Número Femenino</label>
+                <input type="number" id="num_femenino" required min="0" placeholder="Ej. 2">
+                <label>Número Menores de Edad</label>
+                <input type="number" id="num_menores" required min="0" placeholder="Ej. 1">
+                <label>Edad Promedio del Grupo</label>
+                <input type="number" id="edad_promedio" required min="1" step="0.1" placeholder="Ej. 25.5">
+                
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="irAFase(2)">Atrás</button>
+                    <button type="button" class="btn-primary" onclick="irAFase(4)">
+                        Siguiente &rarr;
+                    </button>
+                </div>
+            </div>
+            
+            <!-- FASE 4: Detalles de la Visita -->
+            <div id="fase4" class="phase">
+                <h3>Detalles de la Visita</h3>
+                <label>Procedencia</label>
+                <select id="pais" required onchange="toggleVenezuelaSelect()">
+                    <option value="">Seleccione País</option>
+                    <option value="Venezuela">Venezuela</option>
+                </select>
+                <div id="venezuela_container" style="display:none;">
+                    <select id="estado" required onchange="populateMunicipios()">
+                        <option value="">Seleccione Estado</option>
+                    </select>
+                    <select id="municipio" required>
+                        <option value="">Seleccione Municipio</option>
+                    </select>
+                </div>
+                <input type="hidden" id="procedencia">
+                <label>¿Ha visitado la Gran Sabana anteriormente?</label>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="visitado_antes_check" onchange="toggleUltimaVisita()">
+                    <label for="visitado_antes_check">Sí, he visitado anteriormente</label>
+                </div>
+                <input type="hidden" id="visitado_antes" value="no">
+                <div id="ultima_visita_container" style="display: none;">
+                    <label>¿Cuándo visitó la Gran Sabana por última vez?</label>
+                    <input type="date" id="ultima_visita">
+                </div>
+                <label>¿Tiene planeado visitar algún destino en particular?</label>
+                <textarea id="destino_particular" rows="2" placeholder="Describa los destinos"></textarea>
+                <label>Fecha de Entrada</label>
+                <input type="date" id="fecha_entrada" required>
+                <label>¿Cuántos días tiene previsto permanecer?</label>
+                <input type="number" id="dias_permanencia" required min="1" placeholder="Ej. 3">
+                <label>Fecha Prevista de Retorno</label>
+                <input type="date" id="fecha_retorno" required>
+                <label>¿Tiene reserva de hotel?</label>
+                <div class="checkbox-container">
+                    <input type="checkbox" id="reserva_hotel_check" onchange="toggleHotel()">
+                    <label for="reserva_hotel_check">Sí, tengo reserva</label>
+                </div>
+                <input type="hidden" id="reserva_hotel" value="no">
+                <div id="hotel_container" style="display: none;">
+                    <label>¿Cuál?</label>
+                    <input type="text" id="hotel_cual" placeholder="Nombre del hotel">
+                </div>
+                <label>Tipo de Alojamiento</label>
+                <select id="tipo_alojamiento" required>
+                    <option value="">Seleccionar</option>
+                    <option value="acampada">Acampada</option>
+                    <option value="mixta">Mixta</option>
+                </select>
+                
+                <div class="btn-group">
+                    <button type="button" class="btn-secondary" onclick="irAFase(3)">Atrás</button>
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        <span id="btnText">Generar QR</span>
+                        <div class="spinner" id="loadingSpinner"></div>
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- RESULTADO Y QR -->
+        <div id="qr-section" class="qr-container">
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            <h3>¡Registro Completado!</h3>
+            <p style="color:var(--text-light)">Muestre este código en la entrada:</p>
+            
+            <canvas id="codigoQR"></canvas>
+            
+            <div id="syncStatusBox" class="status-msg"></div>
+            
+            <button class="btn-secondary" onclick="location.reload()" style="margin-top:10px;">
+                Nuevo Registro
+            </button>
+        </div>
+    </div>
+
+    <!-- Contenedor de Toasts -->
+    <div id="toast-container"></div>
+
+    <script>
+        // --- 1. CONFIGURACIÓN ---
+
+         // --- LOGICA PANTALLA DE CARGA ---
+        window.addEventListener('load', () => {
+            const splash = document.getElementById('splash-screen');
+            const mainContent = document.getElementById('mainContent');
+            
+            setTimeout(() => {
+                splash.classList.add('hidden');
+                // Ahora sí funcionará porque restauramos el ID mainContent
+                setTimeout(() => {
+                    if(mainContent) mainContent.classList.add('visible');
+                }, 300);
+            }, 3000); 
+        });
+        
+        // Populate procedencia select
+        const procedenciaSelect = document.getElementById('procedencia');
+        
+        // Venezuelan states and municipalities
+        const venezuelanData = {
+            "Distrito Capital": ["Libertador"],
+            "Amazonas": ["Alto Orinoco", "Atabapo", "Atures", "Autana", "Manapiare", "Maroa", "Río Negro"],
+            "Anzoátegui": ["Anaco", "Aragua", "Diego Bautista Urbaneja", "Fernando de Peñalver", "Francisco del Carmen Carvajal", "Francisco de Miranda", "Guanta", "Independencia", "José Gregorio Monagas", "Juan Antonio Sotillo", "Juan Manuel Cajigal", "Libertad", "Manuel Ezequiel Bruzual", "Pedro María Freites", "Píritu", "San José de Guanipa", "San Juan de Capistrano", "Santa Ana", "Simón Bolívar", "Simón Rodríguez", "Sir Artur McGregor"],
+            "Apure": ["Achaguas", "Biruaca", "Muñoz", "Páez", "Pedro Camejo", "Rómulo Gallegos", "San Fernando"],
+            "Aragua": ["Bolívar", "Camatagua", "Francisco Linares Alcántara", "Girardot", "José Angel Lamas", "José Félix Ribas", "José Rafael Revenga", "Libertador", "Mario Briceño Iragorry", "Ocumare de la Costa de Oro", "San Casimiro", "San Sebastián", "Santiago Mariño", "Santos Michelena", "Sucre", "Tovar", "Urdaneta", "Zamora"],
+            "Barinas": ["Alberto Arvelo Torrealba", "Andrés Eloy Blanco", "Antonio José de Sucre", "Arismendi", "Barinas", "Bolívar", "Cruz Paredes", "Ezequiel Zamora", "Obispos", "Pedraza", "Rojas", "Sosa"],
+            "Bolívar": ["Caroní", "Cedeño", "El Callao", "Gran Sabana", "Heres", "Padre Pedro Chien", "Piar", "Raúl Leoni", "Roscio", "Sifontes", "Sucre"],
+            "Carabobo": ["Bejuma", "Carlos Arvelo", "Diego Ibarra", "Guacara", "Juan José Mora", "Libertador", "Los Guayos", "Miranda", "Montalbán", "Naguanagua", "Puerto Cabello", "San Diego", "San Joaquín", "Valencia"],
+            "Cojedes": ["Anzoátegui", "Falcón", "Girardot", "Lima Blanco", "Pao de San Juan Bautista", "Ricaurte", "Rómulo Gallegos", "San Carlos", "Tinaco"],
+            "Delta Amacuro": ["Antonio Díaz", "Casacoima", "Pedernales", "Tucupita"],
+            "Falcón": ["Acosta", "Bolívar", "Buchivacoa", "Cacique Manaure", "Carirubana", "Colina", "Dabajuro", "Democracia", "Falcón", "Federación", "Jacura", "Los Taques", "Mauroa", "Miranda", "Monseñor Iturriza", "Palmasola", "Petit", "Píritu", "San Francisco", "Silva", "Sucre", "Tocopero", "Unión", "Urumaco", "Zamora"],
+            "Guárico": ["Camaguán", "Chaguaramas", "El Socorro", "Francisco de Miranda", "José Félix Ribas", "José Tadeo Monagas", "Juan Germán Roscio", "Julián Mellado", "Las Mercedes", "Leonardo Infante", "Ortiz", "Pedro Zaraza", "San Gerónimo de Guayabal", "San José de Guaribe", "Santa María de Ipire"],
+            "Lara": ["Andrés Eloy Blanco", "Crespo", "Iribarren", "Jiménez", "Morán", "Palavecino", "Simón Planas", "Torres", "Urdaneta"],
+            "Mérida": ["Alberto Adriani", "Andrés Bello", "Antonio Pinto Salinas", "Aricagua", "Arzobispo Chacón", "Campo Elías", "Caracciolo Parra Olmedo", "Cardenal Quintero", "Guaraque", "Julio César Salas", "Justo Briceño", "Libertador", "Miranda", "Obispo Ramos de Lora", "Padre Noguera", "Pueblo Llano", "Rangel", "Rivas Dávila", "Santos Marquina", "Sucre", "Tovar", "Tulio Febres Cordero", "Zea"],
+            "Miranda": ["Acevedo", "Andrés Bello", "Baruta", "Brión", "Buroz", "Carrizal", "Chacao", "Cristóbal Rojas", "El Hatillo", "Guaicaipuro", "Independencia", "Lander", "Los Salias", "Páez", "Paz Castillo", "Pedro Gual", "Plaza", "Simón Bolívar", "Sucre", "Urdaneta", "Zamora"],
+            "Monagas": ["Acosta", "Aguasay", "Bolívar", "Caripe", "Cedeño", "Ezequiel Zamora", "Libertador", "Maturín", "Piar", "Punceres", "Santa Bárbara", "Sotillo", "Uracoa"],
+            "Nueva Esparta": ["Antolín del Campo", "Arismendi", "Díaz", "García", "Gómez", "Maneiro", "Marcano", "Mariño", "Macanao Peninsula", "Tubores", "Villalba"],
+            "Portuguesa": ["Agua Blanca", "Araure", "Esteller", "Guanare", "Guanarito", "Monseñor José Vicente de Unda", "Ospino", "Páez", "Papelón", "San Genaro de Boconoito", "San Rafael de Onoto", "Santa Rosalía", "Sucre", "Turén"],
+            "Sucre": ["Andrés Eloy Blanco", "Andrés Mata", "Arismendi", "Benítez", "Bermúdez", "Bolívar", "Cajigal", "Cruz Salmerón Acosta", "Libertador", "Mariño", "Mejía", "Montes", "Ribero", "Sucre", "Valdez"],
+            "Táchira": ["Andres Bello", "Antonio Romulo Costa", "Ayacucho", "Bolívar", "Cardenas", "Cordoba", "Fernandez Feo", "Francisco de Miranda", "Garcia de Hevia", "Guasimos", "Independencia", "Jauregui", "Jose Maria Vargas", "Junín", "Libertad", "Libertador", "Lobatera", "Michelena", "Panamericano", "Pedro Maria Ureña", "Rafael Urdaneta", "Samuel Dario Maldonado", "San Cristobal", "San Judas Tadeo", "Seboruco", "Simón Rodríguez", "Sucre", "Torbes", "Uribante"],
+            "Trujillo": ["Andrés Bello", "Boconó", "Bolívar", "Candelaria", "Carache", "Escuque", "José Felipe Márquez Cañizales", "José Vicente Campo Elías", "La Ceiba", "Miranda", "Monte Carmelo", "Motatán", "Pampán", "Pampanito", "Rafael Rangel", "San Rafael de Carvajal", "Sucre", "Trujillo", "Urdaneta", "Valera"],
+            "La Guaira": ["Vargas"],
+            "Yaracuy": ["Aristides Bastidas", "Bolivar", "Bruzual", "Cocorote", "Independencia", "Jose Antonio Paez", "La Trinidad", "Manuel Monge", "Nirgua", "Peña", "San Felipe", "Sucre", "Urachiche", "Veroes"],
+            "Zulia": ["Almirante Padilla", "Baralt", "Cabimas", "Catatumbo", "Colón", "Francisco Javier Pulgar", "Jesús Enrique Lossada", "Jesús María Semprún", "La Cañada de Urdaneta", "Lagunillas", "Machiques de Perijá", "Mara", "Maracaibo", "Miranda", "Páez", "Rosario de Perijá", "San Francisco", "Santa Rita", "Simón Bolívar", "Sucre", "Valmore Rodríguez"]
+        };
+        
+        // Countries
+        const countries = [
+            "Afghanistan", "Albania", "Algeria", "Andorra", "Angola", "Antigua and Barbuda", "Argentina", "Armenia", "Australia", "Austria", "Azerbaijan", "Bahamas", "Bahrain", "Bangladesh", "Barbados", "Belarus", "Belgium", "Belize", "Benin", "Bhutan", "Bolivia", "Bosnia and Herzegovina", "Botswana", "Brazil", "Brunei", "Bulgaria", "Burkina Faso", "Burundi", "Cambodia", "Cameroon", "Canada", "Cape Verde", "Central African Republic", "Chad", "Chile", "China", "Colombia", "Comoros", "Congo", "Costa Rica", "Croatia", "Cuba", "Cyprus", "Czech Republic", "Denmark", "Djibouti", "Dominica", "Dominican Republic", "Ecuador", "Egypt", "El Salvador", "Equatorial Guinea", "Eritrea", "Estonia", "Eswatini", "Ethiopia", "Fiji", "Finland", "France", "Gabon", "Gambia", "Georgia", "Germany", "Ghana", "Greece", "Grenada", "Guatemala", "Guinea", "Guinea-Bissau", "Guyana", "Haiti", "Honduras", "Hungary", "Iceland", "India", "Indonesia", "Iran", "Iraq", "Ireland", "Israel", "Italy", "Ivory Coast", "Jamaica", "Japan", "Jordan", "Kazakhstan", "Kenya", "Kiribati", "Kuwait", "Kyrgyzstan", "Laos", "Latvia", "Lebanon", "Lesotho", "Liberia", "Libya", "Liechtenstein", "Lithuania", "Luxembourg", "Madagascar", "Malawi", "Malaysia", "Maldives", "Mali", "Malta", "Marshall Islands", "Mauritania", "Mauritius", "Mexico", "Micronesia", "Moldova", "Monaco", "Mongolia", "Montenegro", "Morocco", "Mozambique", "Myanmar", "Namibia", "Nauru", "Nepal", "Netherlands", "New Zealand", "Nicaragua", "Niger", "Nigeria", "North Korea", "North Macedonia", "Norway", "Oman", "Pakistan", "Palau", "Panama", "Papua New Guinea", "Paraguay", "Peru", "Philippines", "Poland", "Portugal", "Qatar", "Romania", "Russia", "Rwanda", "Saint Kitts and Nevis", "Saint Lucia", "Saint Vincent and the Grenadines", "Samoa", "San Marino", "São Tomé and Príncipe", "Saudi Arabia", "Senegal", "Serbia", "Seychelles", "Sierra Leone", "Singapore", "Slovakia", "Slovenia", "Solomon Islands", "Somalia", "South Africa", "South Korea", "South Sudan", "Spain", "Sri Lanka", "Sudan", "Suriname", "Sweden", "Switzerland", "Syria", "Tajikistan", "Tanzania", "Thailand", "Timor-Leste", "Togo", "Tonga", "Trinidad and Tobago", "Tunisia", "Turkey", "Turkmenistan", "Tuvalu", "Uganda", "Ukraine", "United Arab Emirates", "United Kingdom", "United States", "Uruguay", "Uzbekistan", "Vanuatu", "Vatican City", "Venezuela", "Vietnam", "Yemen", "Zambia", "Zimbabwe"
+        ];
+        
+        // Populate pais select with countries
+        const paisSelect = document.getElementById('pais');
+        countries.forEach(country => {
+            if (country !== 'Venezuela') {
+                const option = document.createElement('option');
+                option.value = country;
+                option.textContent = country;
+                paisSelect.appendChild(option);
+            }
+        });
+        
+        // Populate estado select with states
+        const estadoSelect = document.getElementById('estado');
+        Object.keys(venezuelanData).forEach(state => {
+            const option = document.createElement('option');
+            option.value = state;
+            option.textContent = state;
+            estadoSelect.appendChild(option);
+        });
+        
+        function toggleVenezuelaSelect() {
+            const container = document.getElementById('venezuela_container');
+            if (paisSelect.value === 'Venezuela') {
+                container.style.display = 'block';
+            } else {
+                container.style.display = 'none';
+                document.getElementById('estado').value = '';
+                document.getElementById('municipio').innerHTML = '<option value="">Seleccione Municipio</option>';
+            }
+        }
+        
+        function populateMunicipios() {
+            const estado = estadoSelect.value;
+            const municipioSelect = document.getElementById('municipio');
+            municipioSelect.innerHTML = '<option value="">Seleccione Municipio</option>';
+            if (estado && venezuelanData[estado]) {
+                venezuelanData[estado].forEach(municipio => {
+                    const option = document.createElement('option');
+                    option.value = municipio;
+                    option.textContent = municipio;
+                    municipioSelect.appendChild(option);
+                });
+            }
+        }
+        
+        const db = new Dexie("GranSabanaDB");
+        db.version(1).stores({ 
+            envios: 'id, marca, modelo, placa, color, vehiculo_tipo, persona_responsable, cedula, email, telefono, genero, num_integrantes, num_masculino, num_femenino, num_menores, edad_promedio, procedencia, visitado_antes, ultima_visita, destino_particular, fecha_entrada, dias_permanencia, fecha_retorno, reserva_hotel, hotel_cual, tipo_alojamiento' 
+        });
+
+        const form = document.getElementById('multiPhaseForm');
+        const networkIndicator = document.getElementById('networkStatus');
+        const submitBtn = document.getElementById('submitBtn');
+        const spinner = document.getElementById('loadingSpinner');
+        const btnText = document.getElementById('btnText');
+
+        // --- 2. LÓGICA DE INTERFAZ (UI) ---
+
+        function irAFase(n) {
+            document.querySelectorAll('.phase').forEach(el => el.classList.remove('active'));
+            document.getElementById('fase' + n).classList.add('active');
+            
+            // Update timeline
+            document.querySelectorAll('.step').forEach((step, index) => {
+                const stepNumber = index + 1;
+                if (stepNumber < n) {
+                    step.classList.add('completed');
+                    step.classList.remove('active');
+                } else if (stepNumber === n) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                } else {
+                    step.classList.remove('completed', 'active');
+                }
+            });
+        }
+
+        function toggleUltimaVisita() {
+            const visitado = document.getElementById('visitado_antes_check').checked;
+            const container = document.getElementById('ultima_visita_container');
+            const hiddenField = document.getElementById('visitado_antes');
+            if (visitado) {
+                container.style.display = 'block';
+                document.getElementById('ultima_visita').required = true;
+                hiddenField.value = 'si';
+            } else {
+                container.style.display = 'none';
+                document.getElementById('ultima_visita').required = false;
+                document.getElementById('ultima_visita').value = '';
+                hiddenField.value = 'no';
+            }
+        }
+
+        function toggleHotel() {
+            const reserva = document.getElementById('reserva_hotel_check').checked;
+            const container = document.getElementById('hotel_container');
+            const hiddenField = document.getElementById('reserva_hotel');
+            if (reserva) {
+                container.style.display = 'block';
+                document.getElementById('hotel_cual').required = true;
+                hiddenField.value = 'si';
+            } else {
+                container.style.display = 'none';
+                document.getElementById('hotel_cual').required = false;
+                document.getElementById('hotel_cual').value = '';
+                hiddenField.value = 'no';
+            }
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 4000);
+        }
+
+        // --- 3. GESTIÓN ONLINE/OFFLINE ---
+
+        function updateOnlineStatus() {
+            if (navigator.onLine) {
+                networkIndicator.classList.remove('offline');
+                sincronizarDatos(); // INTENTO AUTOMÁTICO AL VOLVER LA CONEXIÓN
+            } else {
+                networkIndicator.classList.add('offline');
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        // Chequeo inicial con pequeño delay para asegurar carga
+        setTimeout(updateOnlineStatus, 1000);
+
+        // --- 4. FUNCIÓN SEGURA PARA GENERAR ID (FIX PARA MÓVILES HTTP) ---
+        function generarID() {
+            // Intenta usar la API moderna si está disponible (HTTPS o Localhost)
+            if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+                return crypto.randomUUID();
+            }
+            // Si falla (Móviles por HTTP), usa este generador manual compatible
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        // --- VALIDACIÓN DEL FORMULARIO ---
+        function validateForm() {
+            const pais = document.getElementById('pais').value;
+            if (!pais) {
+                alert('Seleccione un país de procedencia.');
+                return false;
+            }
+            if (pais === 'Venezuela') {
+                const estado = document.getElementById('estado').value;
+                const municipio = document.getElementById('municipio').value;
+                if (!estado) {
+                    alert('Seleccione un estado.');
+                    return false;
+                }
+                if (!municipio) {
+                    alert('Seleccione un municipio.');
+                    return false;
+                }
+            }
+
+            const matricula = document.getElementById('matricula').value.trim();
+            const telefono = document.getElementById('telefono').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const cedula = document.getElementById('cedula').value.trim();
+            const fechaEntrada = document.getElementById('fecha_entrada').value;
+            const fechaRetorno = document.getElementById('fecha_retorno').value;
+            const numIntegrantes = parseInt(document.getElementById('num_integrantes').value) || 0;
+            const numMasculino = parseInt(document.getElementById('num_masculino').value) || 0;
+            const numFemenino = parseInt(document.getElementById('num_femenino').value) || 0;
+            const numMenores = parseInt(document.getElementById('num_menores').value) || 0;
+            const edadPromedio = parseFloat(document.getElementById('edad_promedio').value) || 0;
+
+            // Validar matrícula: letras, números, espacios, guiones
+            const matriculaRegex = /^[A-Z0-9\s\-]+$/i;
+            if (matricula && !matriculaRegex.test(matricula)) {
+                alert('La matrícula contiene caracteres inválidos. Solo se permiten letras, números, espacios y guiones.');
+                return false;
+            }
+
+            // Validar teléfono: números, espacios, guiones, +, paréntesis
+            const telefonoRegex = /^[0-9\s\-\+\(\)]+$/;
+            if (telefono && !telefonoRegex.test(telefono)) {
+                alert('El teléfono contiene caracteres inválidos. Solo se permiten números, espacios, guiones, + y paréntesis.');
+                return false;
+            }
+
+            // Validar email (adicional, aunque HTML5 lo hace)
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email && !emailRegex.test(email)) {
+                alert('Por favor ingrese un correo electrónico válido.');
+                return false;
+            }
+
+            // Validar cédula: formato venezolano flexible (V/E/J - números)
+            const cedulaRegex = /^[VEJ]\-\d{7,8}$/i;
+            if (cedula && !cedulaRegex.test(cedula)) {
+                alert('La cédula debe tener formato V-12345678 o similar (letra - números).');
+                return false;
+            }
+
+            // Validar fechas
+            if (fechaEntrada && fechaRetorno) {
+                const entrada = new Date(fechaEntrada);
+                const retorno = new Date(fechaRetorno);
+                if (entrada > retorno) {
+                    alert('La fecha de entrada no puede ser posterior a la fecha de retorno.');
+                    return false;
+                }
+            }
+
+            // Validar composición del grupo
+            if (numMasculino + numFemenino > numIntegrantes) {
+                alert('La suma de hombres y mujeres no puede exceder el número total de integrantes.');
+                return false;
+            }
+
+            if (numMenores > numIntegrantes) {
+                alert('El número de menores no puede exceder el número total de integrantes.');
+                return false;
+            }
+
+            // Validar edad promedio razonable
+            if (edadPromedio < 1 || edadPromedio > 100) {
+                alert('La edad promedio debe estar entre 1 y 100 años.');
+                return false;
+            }
+
+            return true;
+        }
+
+        // --- 5. ENVÍO DEL FORMULARIO ---
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            
+            // Validar formulario
+            if (!validateForm()) {
+                return;
+            }
+            
+            try {
+                // UI: Cargando
+                btnText.innerText = "Procesando...";
+                spinner.style.display = "inline-block";
+                submitBtn.disabled = true;
+
+                // Generar ID con la función compatible
+                const uuid = generarID(); 
+
+                // Set procedencia value
+                const pais = document.getElementById('pais').value;
+                let procedenciaValue = pais;
+                if (pais === 'Venezuela') {
+                    const estado = document.getElementById('estado').value;
+                    const municipio = document.getElementById('municipio').value;
+                    procedenciaValue = estado + ' - ' + municipio;
+                }
+                document.getElementById('procedencia').value = procedenciaValue;
+
+                const datos = {
+                    id: uuid,
+                    marca: document.getElementById('marca').value,
+                    modelo: document.getElementById('modelo').value,
+                    placa: document.getElementById('matricula').value.toUpperCase(),
+                    color: document.getElementById('color').value,
+                    vehiculo_tipo: document.getElementById('vehiculo_tipo').value,
+                    persona_responsable: document.getElementById('persona_responsable').value,
+                    cedula: document.getElementById('cedula').value,
+                    email: document.getElementById('email').value,
+                    telefono: document.getElementById('telefono').value,
+                    genero: document.getElementById('genero').value,
+                    num_integrantes: document.getElementById('num_integrantes').value,
+                    num_masculino: document.getElementById('num_masculino').value,
+                    num_femenino: document.getElementById('num_femenino').value,
+                    num_menores: document.getElementById('num_menores').value,
+                    edad_promedio: document.getElementById('edad_promedio').value,
+                    procedencia: document.getElementById('procedencia').value,
+                    visitado_antes: document.getElementById('visitado_antes').value,
+                    ultima_visita: document.getElementById('ultima_visita').value || null,
+                    destino_particular: document.getElementById('destino_particular').value,
+                    fecha_entrada: document.getElementById('fecha_entrada').value,
+                    dias_permanencia: document.getElementById('dias_permanencia').value,
+                    fecha_retorno: document.getElementById('fecha_retorno').value,
+                    reserva_hotel: document.getElementById('reserva_hotel').value,
+                    hotel_cual: document.getElementById('hotel_cual').value || null,
+                    tipo_alojamiento: document.getElementById('tipo_alojamiento').value
+                };
+
+                // PASO 1: Guardar SIEMPRE en local primero (Offline-First)
+                await db.envios.put(datos);
+
+                // Generar QR visualmente (con delay para UI)
+                setTimeout(async () => {
+                    try {
+                        mostrarQR(uuid);
+
+                        // PASO 2: Intentar Sincronizar REALMENTE
+                        if (navigator.onLine) {
+                            actualizarEstadoUI("Enviando al servidor...", "local");
+                            await sincronizarDatos();
+                        } else {
+                            actualizarEstadoUI("Guardado en dispositivo. Se enviará al conectar internet.", "local");
+                            showToast("Sin conexión: Guardado localmente");
+                        }
+                    } catch (innerError) {
+                        console.error("Error visual/sync:", innerError);
+                        alert("Datos guardados, pero hubo un error visual: " + innerError.message);
+                    }
+                }, 600);
+
+            } catch (error) {
+                // ESTE CATCH ES CRÍTICO PARA MÓVILES
+                console.error("Error crítico:", error);
+                alert("Error: " + error.message); // Alerta visible en el móvil
+                
+                // Restaurar botón
+                submitBtn.disabled = false;
+                btnText.innerText = "Generar QR";
+                spinner.style.display = "none";
+            }
+        };
+
+        function mostrarQR(uuid) {
+            form.style.display = 'none';
+            document.getElementById('qr-section').style.display = 'block';
+            new QRious({ 
+                element: document.getElementById('codigoQR'), 
+                value: uuid, 
+                size: 200,
+                level: 'H'
+            });
+        }
+
+        function actualizarEstadoUI(texto, tipo) {
+            const box = document.getElementById('syncStatusBox');
+            if(box) {
+                box.innerText = texto;
+                box.className = 'status-msg ' + tipo;
+            }
+        }
+
+        // --- 6. SINCRONIZACIÓN CON BACKEND (FLASK) ---
+
+        async function sincronizarDatos() {
+            // Leer todos los datos pendientes en Dexie
+            const pendientes = await db.envios.toArray();
+            
+            if (pendientes.length === 0) return;
+
+            showToast(`Sincronizando ${pendientes.length} registros...`);
+
+            for (let data of pendientes) {
+                try {
+                    const response = await fetch('/api/enviar', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Error servidor: ${response.status}`);
+                    }
+                    
+                    // Éxito: borrar de DB Local
+                    await db.envios.delete(data.id);
+                    
+                    const qrSection = document.getElementById('qr-section');
+                    if(qrSection.style.display === 'block') {
+                        actualizarEstadoUI("¡Datos sincronizados con la nube!", "sync");
+                    }
+
+                } catch (e) {
+                    console.error("Fallo al enviar:", e);
+                    const qrSection = document.getElementById('qr-section');
+                    if(qrSection.style.display === 'block') {
+                        actualizarEstadoUI("Error de red. Se reintentará luego.", "error");
+                    }
+                }
+            }
+            
+            const restantes = await db.envios.count();
+            if (restantes === 0) {
+                showToast("Sincronización completada");
+            }
+        }
+
+        // Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(() => console.log('SW registrado'))
+                .catch(err => console.log('SW error:', err));
+        }
+    </script>
+</body>
+</html>

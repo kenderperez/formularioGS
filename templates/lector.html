@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Escanear Ingreso</title>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/water.css">
+</head>
+<body>
+    <nav><a href="/admin">Volver al Panel</a></nav>
+    <h1>Punto de Control QR</h1>
+    <div id="reader" style="width: 100%; max-width: 500px; margin: auto;"></div>
+    <script>
+        function onScanSuccess(decodedText) {
+            window.location.href = `/detalles_visita/${decodedText}`;
+        }
+        let html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} });
+        html5QrcodeScanner.render(onScanSuccess);
+    </script>
+</body>
+</html>
